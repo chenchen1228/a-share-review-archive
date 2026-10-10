@@ -2,9 +2,14 @@ name: Sync public A-share review to GitHub Pages
 on:
   push:
     branches: [main]
+    paths:
+      - '*.py'
+      - '.github/workflows/sync-pages.yml'
+      - 'docs/**'
   workflow_dispatch:
   schedule:
-    - cron: '17,47 * * * *'
+    # Poll automatically; GitHub may delay scheduled events.
+    - cron: '7,22,37,52 * * * *'
 permissions:
   contents: write
   pages: write
@@ -15,16 +20,21 @@ concurrency:
 jobs:
   sync-and-deploy:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 20
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
+      - name: Test source, history and deployment recovery guards
+        run: python3 -m unittest test_sync test_publication -v
       - name: Fetch and verify the complete public report
         id: mirror
         run: python3 sync_public_site.py --output docs
-      - name: Commit updated reports and history
+      - name: Check the live website separately from repository files
+        id: publication
+        run: python3 verify_publication.py plan --directory docs
+      - name: Commit updated reports and immutable history
         if: steps.mirror.outputs.changed == 'true'
         run: |
           git config user.name 'github-actions[bot]'
@@ -33,12 +43,14 @@ jobs:
           git commit -m 'Synchronize public review and archive'
           git push
       - uses: actions/configure-pages@v5
-        if: steps.mirror.outputs.changed == 'true' || github.event_name != 'schedule'
+        if: steps.publication.outputs.needs_deploy == 'true'
       - uses: actions/upload-pages-artifact@v3
-        if: steps.mirror.outputs.changed == 'true' || github.event_name != 'schedule'
+        if: steps.publication.outputs.needs_deploy == 'true'
         with:
           path: docs
           retention-days: 1
       - uses: actions/deploy-pages@v4
         id: deployment
-        if: steps.mirror.outputs.changed == 'true' || github.event_name != 'schedule'
+        if: steps.publication.outputs.needs_deploy == 'true'
+      - name: Verify the public HTML, data and archived revision after publication
+        run: python3 verify_publication.py verify --directory docs
