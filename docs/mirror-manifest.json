@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "source": "https://a-share-review-archive.chen4002812.chatgpt.site",
+  "artifactId": "dashboard:d8650926-9515-42c6-a507-4c9979168165",
+  "sourceHtmlSha256": "a9b73de73035ad0c4994e2ff2f6146ec42b69c678dd1ba8716ee5ade25391e0a",
+  "snapshotSha256": "fb58e632028abece24ab54a71b2920663bd1e035dc4d9364ba75463226282e16",
+  "generatedAt": "2026-10-10T17:09:08.216012+08:00",
+  "reportDates": [
+    "2026-10-09"
+  ],
+  "queryCount": 6,
+  "rowCount": 151,
+  "mirrorHtmlSha256": "0667513e6b4e064e6dc9cec9963c519b98230b19055dd42cc0c8888d799e5258"
+}
