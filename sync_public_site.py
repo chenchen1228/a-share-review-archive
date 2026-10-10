@@ -38,6 +38,18 @@ def download(path):
         return payload
 
 
+def normalize_source_html(html_bytes):
+    # Cloudflare adds a request-specific challenge script outside the report.
+    # Removing only that edge injection avoids pointless commits on every poll.
+    html = html_bytes.decode("utf-8")
+    def retain_report_script(match):
+        script = match[0]
+        if "window.__CF$cv$params" in script and "/cdn-cgi/challenge-platform/scripts/jsd/main.js" in script:
+            return ""
+        return script
+    return re.sub(r'<script(?:\s[^>]*)?>.*?</script>', retain_report_script, html, flags=re.S).encode("utf-8")
+
+
 def read_verified_pair(fetch=download, attempts=3):
     for attempt in range(attempts):
         try:
@@ -56,7 +68,7 @@ def read_verified_pair(fetch=download, attempts=3):
             dates = [r.get("review_date", "") for r in queries.get("reports", {}).get("rows", [])]
             if not dates or any(not re.fullmatch(r"\d{4}-\d{2}-\d{2}", d) for d in dates) or len(dates) != len(set(dates)):
                 raise ValueError("Missing or duplicate historical report dates")
-            return html_bytes, snapshot_bytes, snapshot
+            return normalize_source_html(html_bytes), snapshot_bytes, snapshot
         except Exception as exc:
             if attempt == attempts - 1:
                 raise RuntimeError("Public source unavailable or inconsistent; previous mirror retained") from exc
