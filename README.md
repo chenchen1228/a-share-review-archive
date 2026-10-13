@@ -6,7 +6,7 @@
 
 ## 免费运行
 
-公开仓库、GitHub Pages 默认域名和标准 ubuntu-latest runner，无付费域名、服务器或额外服务密钥。访客无需登录。
+公开仓库、GitHub Pages 默认域名和固定 Ubuntu 24.04 的标准 runner，无付费域名、服务器或额外服务密钥。访客无需登录。
 
 ## 自动同步
 
