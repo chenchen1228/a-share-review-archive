@@ -26,7 +26,7 @@ concurrency:
   cancel-in-progress: true
 jobs:
   sync-and-deploy:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
     environment:
       name: github-pages
@@ -86,7 +86,7 @@ jobs:
   independent-watchdog:
     # Independent of the Pages deployment environment/job: a blocked deployment
     # must not prevent freshness checks or failure alerts.
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
     permissions:
       contents: read
