@@ -24,8 +24,6 @@ docs/mirror-manifest.json 记录源数据日期、哈希与归档日期。排除
 
 每天的新报告及同日修订均保存完整快照；日期导航来自源站报告数据，旧快照持续保留。GitHub Actions 的运行摘要显示实际发布的数据日期和快照 SHA-256。
 
-## 查看运行状态
-
 ## 更新后的自动验收与提醒
 
 每轮同步先在无人值守 Chromium 中实际打开源站，检查总览、完整12节、来源页、历史页以及新旧日期切换。通过后才允许把该版本发布到 GitHub。发布后再检查两站页面、完整快照哈希、全部历史报告日期和最早的不可变归档。截图及验收回执保留在 Actions artifacts 中14天。
@@ -35,6 +33,8 @@ docs/mirror-manifest.json 记录源数据日期、哈希与归档日期。排除
 取数、页面显示和发布读回失败均按阶段最多重试3轮；发布读回每轮另有短暂延迟重试。仍失败时，在本仓库创建一条自动告警Issue并指派给仓库所有者 `chenchen1228`，进入其GitHub通知。相同故障更新已有记录，后续巡检确认恢复后自动关闭。邮件和设备推送取决于个人GitHub通知设置，不另配置邮箱或第三方服务。
 
 每15分钟是GitHub的目标调度频率，可能延迟；后续轮次会再次取数、检查，并补做失败的发布。正常成功不创建提醒Issue。手动Run workflow的 `notification_test` 默认关闭，仅在勾选时发送一条明确标记的通知演练并自动关闭，不修改报告和历史数据。
+
+## 查看运行状态
 
 [Actions 同步记录](https://github.com/chenchen1228/a-share-review-archive/actions/workflows/sync-pages.yml)。需要立即同步时选择 Run workflow。Settings → Pages 的发布源保持 GitHub Actions。
 

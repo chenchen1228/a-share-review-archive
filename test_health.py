@@ -53,6 +53,14 @@ class HealthTests(unittest.TestCase):
         result = retry(['test'], 'source-render', runner=lambda *a, **k: SimpleNamespace(returncode=1), sleep=lambda _: None)
         self.assertFalse(result['success']); self.assertEqual(len(result['attempts']), 3)
 
+    def test_new_report_cannot_hide_a_missing_previous_trading_day(self):
+        dates = ['2026-10-09', '2026-10-13']
+        snapshot = {'id': 'dashboard:d8650926-9515-42c6-a507-4c9979168165', 'buildStatus': 'complete',
+            'queries': {'reports': {'rows': [{'review_date': d, 'visuals': {'conclusions': [{}] * 12}} for d in dates]},
+                        'indicator_table': {'rows': [{'review_date': d} for d in dates for _ in range(14)]}}}
+        with self.assertRaisesRegex(ValueError, '2026-10-12'):
+            validate_snapshot(snapshot, '2026-10-13', ['2026-10-09', '2026-10-12', '2026-10-13'])
+
     def test_notifications_deduplicate_ignore_ordinary_issues_and_recover(self):
         ordinary = {'number': 1, 'body': 'normal issue'}
         alert = {'number': 2, 'body': MARKER, 'user': {'login': 'github-actions[bot]'}, 'assignees': [{'login': 'chenchen1228'}]}

@@ -40,10 +40,10 @@ def required_session(bars, now):
     return max(dates)
 
 
-def read_calendar(now, fetch=None):
+def read_calendar(now, fetch=None, include_sessions=False):
     endpoints = [
-        'https://quotes.sina.cn/cn/api/jsonp_v2.php/var%20_data=/CN_MarketDataService.getKLineData?symbol=sh000001&scale=240&ma=no&datalen=60',
-        'https://money.finance.sina.com.cn/quotes_service/api/json_v2.php/CN_MarketData.getKLineData?symbol=sh000001&scale=240&ma=no&datalen=60',
+        'https://quotes.sina.cn/cn/api/jsonp_v2.php/var%20_data=/CN_MarketDataService.getKLineData?symbol=sh000001&scale=240&ma=no&datalen=1023',
+        'https://money.finance.sina.com.cn/quotes_service/api/json_v2.php/CN_MarketData.getKLineData?symbol=sh000001&scale=240&ma=no&datalen=1023',
     ]
     def download(url):
         req = urllib.request.Request(url, headers={'User-Agent': 'AshareHealthCheck/1.0'})
@@ -59,19 +59,28 @@ def read_calendar(now, fetch=None):
             for bar in bars:
                 if not all(float(bar[k]) > 0 for k in ('open', 'high', 'low', 'close')):
                     raise ValueError('Invalid calendar price')
-            return required_session(bars, now)
+            target = required_session(bars, now)
+            if include_sessions:
+                return {'required': target, 'sessions': sorted({str(b['day'])[:10] for b in bars if str(b['day'])[:10] <= target})}
+            return target
         except (OSError, ValueError, TypeError, KeyError):
             continue
     raise RuntimeError('Both public trading-calendar paths failed; freshness is unverified')
 
 
-def validate_snapshot(snapshot, target):
+def validate_snapshot(snapshot, target, required_dates=None):
     if snapshot.get('id') != ARTIFACT or snapshot.get('buildStatus') != 'complete':
         raise ValueError('Wrong artifact or incomplete report')
     rows = snapshot.get('queries', {}).get('reports', {}).get('rows', [])
     dates = [r.get('review_date') for r in rows]
     if not dates or len(set(dates)) != len(dates) or target not in dates:
         raise ValueError('Expected review is missing or historical dates are duplicated')
+    if required_dates is not None:
+        if not required_dates or min(required_dates) > min(dates):
+            raise ValueError('Trading-calendar coverage does not reach the first archived review')
+        missing = [d for d in required_dates if min(dates) <= d <= target and d not in dates]
+        if missing:
+            raise ValueError('Missing trading-day archives: ' + ', '.join(missing))
     for report in rows:
         day = report['review_date']
         if len(report.get('visuals', {}).get('conclusions', [])) != 12:
@@ -149,12 +158,14 @@ def main():
     a = p.parse_args()
     out = Path('artifacts'); out.mkdir(exist_ok=True)
     local = json.loads((Path(a.directory) / 'snapshot.json').read_text())
-    target = a.expected_date or read_calendar(datetime.now(ZoneInfo('Asia/Shanghai')))
-    dates = validate_snapshot(local, target)
+    calendar = None if a.expected_date else read_calendar(datetime.now(ZoneInfo('Asia/Shanghai')), include_sessions=True)
+    target = a.expected_date or calendar['required']
+    required_dates = None if calendar is None else calendar['sessions']
+    dates = validate_snapshot(local, target, required_dates)
     source_html, source_bytes, source = read_verified_pair()
     if digest(source_bytes) != digest((Path(a.directory) / 'snapshot.json').read_bytes()):
         raise ValueError('Source changed during the check; retry against a consistent version')
-    validate_snapshot(source, target)
+    validate_snapshot(source, target, required_dates)
     result = {'expectedReviewDate': target, 'reportDates': dates, 'sourceSha256': digest(source_bytes), 'sites': []}
     result['sites'].append(browser_check(ORIGIN + '/', source, 'source', out))
     if a.scope == 'both':
