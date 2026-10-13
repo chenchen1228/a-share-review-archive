@@ -16,7 +16,9 @@ permissions:
   id-token: write
 concurrency:
   group: pages-mirror
-  cancel-in-progress: false
+  # A stale waiting run must not block newer publications indefinitely.
+  # The next run verifies and recovers interrupted deployment attempts.
+  cancel-in-progress: true
 jobs:
   sync-and-deploy:
     runs-on: ubuntu-latest
