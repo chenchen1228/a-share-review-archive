@@ -4,20 +4,25 @@ on:
     branches: [main]
     paths:
       - '*.py'
+      - 'requirements-health.txt'
       - '.github/workflows/sync-pages.yml'
       - 'docs/**'
   workflow_dispatch:
+    inputs:
+      notification_test:
+        description: 'Run one clearly labelled notification and recovery exercise'
+        type: boolean
+        default: false
   schedule:
-    # Poll automatically; GitHub may delay scheduled events.
+    # GitHub can delay scheduled events; these are target check times.
     - cron: '7,22,37,52 * * * *'
 permissions:
   contents: write
   pages: write
   id-token: write
+  issues: write
 concurrency:
   group: pages-mirror
-  # A stale waiting run must not block newer publications indefinitely.
-  # The next run verifies and recovers interrupted deployment attempts.
   cancel-in-progress: true
 jobs:
   sync-and-deploy:
@@ -28,11 +33,25 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
-      - name: Test source, history and deployment recovery guards
-        run: python3 -m unittest test_sync test_publication -v
-      - name: Fetch and verify the complete public report
+      - name: Test source, history, retry and alert guards
+        run: python3 -m unittest test_sync test_publication test_health -v
+      - name: Install pinned browser test dependency
+        run: python3 -m pip install -r requirements-health.txt
+      - name: Install Chromium for unattended rendering checks
+        run: python3 -m playwright install --with-deps --only-shell chromium
+      - name: Fetch the source with bounded retry
+        run: python3 retry_check.py --stage source-fetch -- python3 sync_public_site.py --output docs
+      - name: Verify the real source page before publishing it
+        run: python3 retry_check.py --stage source-render -- python3 check_review_sites.py --scope source --directory docs
+      - name: Detect changed reviewed files after all retries
         id: mirror
-        run: python3 sync_public_site.py --output docs
+        run: |
+          python3 - <<'PY'
+          import os, subprocess
+          changed = bool(subprocess.check_output(['git', 'status', '--porcelain', '--', 'docs'], text=True).strip())
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as output:
+              output.write('changed=' + str(changed).lower() + '\n')
+          PY
       - name: Check the live website separately from repository files
         id: publication
         run: python3 verify_publication.py plan --directory docs
@@ -54,5 +73,52 @@ jobs:
       - uses: actions/deploy-pages@v4
         id: deployment
         if: steps.publication.outputs.needs_deploy == 'true'
-      - name: Verify the public HTML, data and archived revision after publication
-        run: python3 verify_publication.py verify --directory docs
+      - name: Retry publication and immutable archive readback
+        run: python3 retry_check.py --stage publication-readback -- python3 verify_publication.py verify --directory docs
+      - name: Check both rendered websites and historical date navigation
+        run: python3 retry_check.py --stage both-sites -- python3 check_review_sites.py --scope both --directory docs
+      - uses: actions/upload-artifact@v4
+        if: always() && !cancelled()
+        with:
+          name: publication-checks
+          path: artifacts/
+          retention-days: 14
+  independent-watchdog:
+    # Independent of the Pages deployment environment/job: a blocked deployment
+    # must not prevent freshness checks or failure alerts.
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install pinned browser test dependency
+        run: python3 -m pip install -r requirements-health.txt
+      - name: Install Chromium for independent page checks
+        run: python3 -m playwright install --with-deps --only-shell chromium
+      - name: Allow a normal concurrent deployment to finish
+        run: sleep 60
+      - name: Independently retry source, GitHub, freshness and history checks
+        run: python3 retry_check.py --stage both-sites --wait-seconds 30 -- python3 run_watchdog.py
+      - name: Notify the owner once if retries still fail
+        if: failure()
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: python3 notify_health.py failure
+      - name: Close existing failure alert after verified recovery
+        if: success()
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: python3 notify_health.py success
+      - name: Exercise notification delivery and recovery once when requested
+        if: success() && github.event_name == 'workflow_dispatch' && inputs.notification_test
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: python3 notify_health.py exercise
+      - uses: actions/upload-artifact@v4
+        if: always() && !cancelled()
+        with:
+          name: independent-health-checks
+          path: artifacts/
+          retention-days: 14
