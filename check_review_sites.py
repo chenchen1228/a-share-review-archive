@@ -106,11 +106,11 @@ def browser_check(url, snapshot, label, out):
             response = page.goto(url + '?view=1&tab=overview', wait_until='domcontentloaded', timeout=60000)
             if not response or response.status != 200:
                 raise ValueError(label + ' homepage failed')
-            expect(page.get_by_role('heading', name=latest['title'], exact=True)).to_be_visible()
+            expect(page.locator('.a-thesis-text').get_by_role('heading', name=latest['title'], exact=True)).to_be_visible()
             checks.append('overview')
             page.get_by_role('tab', name='完整报告', exact=True).click()
             expect(page.locator('section.v-section')).to_have_count(12)
-            expect(page.get_by_role('heading', name=latest['title'], exact=True)).to_be_visible()
+            expect(page.locator('.a-thesis-text').get_by_role('heading', name=latest['title'], exact=True)).to_be_visible()
             checks.append('12 full-report sections')
             page.get_by_role('tab', name='数据来源', exact=True).click()
             expect(page.get_by_role('heading', name='数据如何获取', exact=True)).to_be_visible()
@@ -123,7 +123,7 @@ def browser_check(url, snapshot, label, out):
             # calendar button existence. Each must actually render its title.
             for report in [reports[0], reports[-2] if len(reports) > 1 else latest, latest]:
                 page.get_by_role('button', name=report['review_date'] + ' 已归档', exact=True).click()
-                expect(page.get_by_role('heading', name=report['title'], exact=True)).to_be_visible()
+                expect(page.locator('.a-thesis-text').get_by_role('heading', name=report['title'], exact=True)).to_be_visible()
                 checks.append('date ' + report['review_date'])
             if errors:
                 raise ValueError(label + ' browser pageerror: ' + '; '.join(errors))
