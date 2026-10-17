@@ -21,12 +21,10 @@ def digest(value):
 
 
 def required_session(bars, now):
-    # The 08:30 run has until 10:00 Beijing to finish. Weekend checks use the
-    # latest weekday morning; holidays are resolved from actual trading bars.
+    # Daily 08:30 runs, including Saturdays, have until 10:00 Beijing.
+    # Holidays/weekends are resolved by observed sessions, not run weekdays.
     anchor = now.astimezone(ZoneInfo('Asia/Shanghai'))
     if (anchor.hour, anchor.minute) < (10, 0):
-        anchor -= timedelta(days=1)
-    while anchor.weekday() >= 5:
         anchor -= timedelta(days=1)
     dates = []
     for bar in bars:

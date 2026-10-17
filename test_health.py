@@ -21,8 +21,15 @@ class HealthTests(unittest.TestCase):
 
     def test_weekends_and_holidays_use_completed_trading_observations(self):
         self.assertEqual(required_session(self.bars, self.now('2026-10-12T10:00')), '2026-10-09')
-        self.assertEqual(required_session(self.bars, self.now('2026-10-11T12:00')), '2026-10-08')
+        self.assertEqual(required_session(self.bars, self.now('2026-10-11T12:00')), '2026-10-09')
         self.assertEqual(required_session(self.bars, self.now('2026-10-06T12:00')), '2026-09-30')
+
+    def test_friday_review_due_on_saturday_and_stays_due_on_sunday(self):
+        bars = self.bars + [{'day': d} for d in ['2026-10-14', '2026-10-15', '2026-10-16']]
+        self.assertEqual(required_session(bars, self.now('2026-10-17T09:59')), '2026-10-15')
+        self.assertEqual(required_session(bars, self.now('2026-10-17T10:00')), '2026-10-16')
+        self.assertEqual(required_session(bars, self.now('2026-10-18T08:30')), '2026-10-16')
+        self.assertEqual(required_session(bars, self.now('2026-10-19T10:00')), '2026-10-16')
 
     def test_calendar_failover_and_total_failure(self):
         rows = [dict(day='2026-10-%02d' % i, open='1', high='2', low='1', close='2') for i in range(1, 14)]
