@@ -2,9 +2,9 @@
   "version": 1,
   "source": "https://a-share-review-archive.chen4002812.chatgpt.site",
   "artifactId": "dashboard:d8650926-9515-42c6-a507-4c9979168165",
-  "sourceHtmlSha256": "802437b5f4b2204c4a81d3fa5240f535c3ea40dc98f053e1cb0d1043a98ede85",
-  "snapshotSha256": "6f0ab528afa0f2c63faf75a79cd8b4d9d199e26e91b05ac765bf553d627f451b",
-  "generatedAt": "2026-10-30T08:40:41.536752+08:00",
+  "sourceHtmlSha256": "0d3011a088e0031cd4f12462fc82b3ba54928d51a6e1ec0973603574dcadf42b",
+  "snapshotSha256": "d63facd8566655b3ccb334ec5e0a3c192602d2410dc1556a129f6112197866e9",
+  "generatedAt": "2026-10-31T08:39:23.596025+08:00",
   "reportDates": [
     "2026-10-09",
     "2026-10-12",
@@ -20,9 +20,10 @@
     "2026-10-26",
     "2026-10-27",
     "2026-10-28",
-    "2026-10-29"
+    "2026-10-29",
+    "2026-10-30"
   ],
   "queryCount": 6,
-  "rowCount": 1924,
-  "mirrorHtmlSha256": "43e56d94917938e08d70f8b81631236b0dff98c132c3aceb6e8d6baed52861ab"
+  "rowCount": 2050,
+  "mirrorHtmlSha256": "7ca210c38726d767ceee8ad028a32f69523f1cf1000f9e0d5bdd8262847441cc"
 }
